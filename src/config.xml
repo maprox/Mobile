@@ -3,18 +3,22 @@
         xmlns:gap = "http://phonegap.com/ns/1.0"
         id        = "com.maprox.rclient"
         version   = "1.0.0">
-    <name>Hello World</name>
+    <name>Maprox RClient</name>
     <description>
-        Hello World sample application that responds to the deviceready event.
+        HTML5 application for sending geo-data to the Maprox-server
     </description>
 
     <author href="http://www.maprox.net" email="support@maprox.com">
         Maprox LLC
     </author>
 
-    <feature name="http://api.phonegap.com/1.0/device" />
+    <access origin="https://observer.maprox.net" />
 
-    <preference name="phonegap-version" value="2.1.0" />
+    <feature name="http://api.phonegap.com/1.0/device" />
+    <feature name="http://api.phonegap.com/1.0/geolocation" />
+    <feature name="http://api.phonegap.com/1.0/network" />
+
+    <preference name="phonegap-version" value="2.2.0" />
     <preference name="orientation"      value="default" />
     <preference name="target-device"    value="universal" />
     <preference name="fullscreen"       value="false" />
