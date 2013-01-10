@@ -20,13 +20,14 @@ var app = {
 				window.localStorage.removeItem(id);
 			}
 		}
-	};
+	},
 
 /**
 	* Application Constructor
 	*/
 	initialize: function() {
 		this.bindEvents();
+		this.bindHandlers();
 		// check authorization
 		if (!this.isAuthorized()) {
 			$.mobile.changePage("#registration");
@@ -36,17 +37,24 @@ var app = {
 	},
 
 /**
-	*
+	* Returns true, if this device was already authorized
 	*/
 	isAuthorized: function() {
 		return (typeof this.getDeviceKey() != "undefined");
 	},
 
 /**
-	*
+	* Returns a stored device key
 	*/
 	getDeviceKey: function() {
-		return window.localStorage["devicekey"];
+		return app.storage.get("devicekey");
+	},
+
+/**
+	* Bind button handlers
+	*/
+	bindHandlers: function() {
+		
 	},
 
 /**
@@ -75,4 +83,12 @@ var app = {
 	receivedEvent: function(id) {
 		console.log('Received Event: ' + id);
 	}
+};
+
+
+/**
+ * 
+ */
+app.manager = {
+	
 };

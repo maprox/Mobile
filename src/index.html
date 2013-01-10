@@ -19,7 +19,7 @@
 
 <div data-role="page" id="settings">
 	<div data-role="header">
-		This is the second page
+		<h1>Settings</h1>
 	</div>
 	<div data-role="content">
 		And the settings go here...
@@ -27,16 +27,13 @@
 			Back to the registration page
 		</a></p>
 	</div>
-	<div data-role="footer">
-		This is the footer
-	</div>
 </div>
 
 <div data-role="page" id="registration">
 	<div data-role="header">
-		This is the header
+		<h1>Registration</h1>
 	</div>
-	<div data-role="content">
+	<div data-role="content" style="padding: 20px">
 		<div data-role="fieldcontain">
 			<label for="name">Device name:</label>
 			<input type="text" name="name" id="name" value="" />
@@ -45,17 +42,14 @@
 			<label for="share_key">Share key:</label>
 			<input type="password" name="share_key" id="share_key" value="" />
 		</div>
-		<p><a href="#settings" data-role="button" data-transition="slideup">Show "settings" page</a></p>
-	</div>
-	<div data-role="footer">
-		This is the footer
+		<p><input type="button" id="signup" value="Sign up"></input></p>
 	</div>
 </div>
 
 <script type="text/javascript" src="phonegap.js"></script>
 <script type="text/javascript" src="js/index.js"></script>
 <script type="text/javascript">
-$(document).ready(function() {
+$(document).bind("mobileinit", function() {
 	app.initialize();
 });
 </script>
