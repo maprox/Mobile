@@ -12,27 +12,6 @@
 	<link rel="stylesheet" type="text/css" href="css/index.css" />
 	<title>Maprox RClient</title>
 
-<style>
-
-/* -----------------------
-     MODAL LOADER
-   ----------------------- */
-
-.modalWindow{
-	width: 100%;
-	height: 100%;
-	position: absolute;
-	z-index: 1500;
-	background: white;
-	opacity: 0.7;
-}
-
-.ui-loader{
-	z-index: 1501;
-}
-
-</style>
-
 </head>
 <body>
 
@@ -57,14 +36,17 @@
 	</div>
 	<div data-role="content" style="padding: 20px">
 		<div data-role="fieldcontain">
-			<label for="name">Device name:</label>
-			<input type="text" name="name" id="name" value="" />
+			<label for="devicename">Device name:</label>
+			<input type="text" name="devicename" id="devicename" value="" />
 		</div>
 		<div data-role="fieldcontain">
 			<label for="share_key">Share key:</label>
 			<input type="text" name="share_key" id="share_key" value="" />
 		</div>
-		<p><input type="button" id="signup" value="Sign up"></input></p>
+		<div class="errorBlock" style="display:none">
+			The error message is here
+		</div>
+		<p><input type="button" id="signup" value="Sign up"/></p>
 	</div>
 </div>
 

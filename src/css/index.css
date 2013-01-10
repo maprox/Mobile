@@ -1,0 +1,29 @@
+
+/* -----------------------
+     MODAL LOADER
+   ----------------------- */
+
+.modalWindow{
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	z-index: 1500;
+	background: white;
+	opacity: 0.7;
+}
+
+.ui-loader{
+	z-index: 1501;
+}
+
+/* -----------------------
+     ERROR BLOCK
+   ----------------------- */
+
+.errorBlock{
+	padding:20px;
+	color:#f00;
+	background: #fee;
+	font-weight: bold;
+	text-align: center;
+}
