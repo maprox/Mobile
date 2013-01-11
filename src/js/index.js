@@ -2,7 +2,24 @@
  * Maprox REST Client JS implementation
  * 2013, Maprox LLC
  */
+
+/**
+ * Application configuration
+ */
 var app = {
+	cfg: {
+		path: 'https://observer.maprox.net/',
+		checkLocationPeriod: 20000, // 20 sec
+		sendDataPeriod: 60000, // 1 minute
+		accuracyLimit: 150, // 150 meters,
+		maximumPositionAge: 600000 // 10 minutes
+	}
+};
+
+/**
+ * Main application
+ */
+extend(app, {
 /**
 	* Constructor
 	*/
@@ -23,15 +40,42 @@ var app = {
 		// ajax error handling
 		$.ajaxSetup({
 			error: function(xhr){
-				var msg = 'Request Status: ' + xhr.status +
+				console.error('Request Status: ' + xhr.status +
 					' Status Text: ' + xhr.statusText +
-					' ' + xhr.responseText;
-				console.warn(mgs);
+					' ' + xhr.responseText);
 			}
 		});
-		// check authorization
-		$.mobile.changePage(!this.isAuthorized() ?
-			"#registration" : "#settings");
+	},
+
+/**
+	* Bind button handlers
+	*/
+	bindHandlers: function() {
+		var locationTracker = new app.LocationTrackerLooper();
+		var serverSender = new app.ServerSenderLooper();
+		$('#signup').on('tap', $.proxy(this.signup, this));
+		$('#tracking').on('change', function() {
+			locationTracker.setActive($('#tracking').val());
+		});
+		// startup page start
+		$('#startup').live('pageshow', function() {
+			// if user is not authorised - show registration page
+			// otherwise - settings page
+			$.mobile.changePage(app.isAuthorized() ?
+				"#settings" : "#registration");
+		});
+		// settings page start
+		$('#settings').live('pageshow', function() {
+			// updates slider value
+			var sliderValue = locationTracker.isEnabled() ? 1 : 0;
+			$('#tracking').val(sliderValue).slider("refresh");
+			// start tracking if it is enabled
+			if (locationTracker.isEnabled()) {
+				locationTracker.start();
+			}
+			// always start server sender "thread"
+			serverSender.start();
+		});
 	},
 
 /**
@@ -79,14 +123,7 @@ var app = {
 	},
 
 /**
-	* Bind button handlers
-	*/
-	bindHandlers: function() {
-		$('#signup').on('tap', $.proxy(this.signup, this));
-	},
-
-/**
-	*
+	* Signup procedure
 	*/
 	signup: function() {
 		if (!this.lock()) { return; }
@@ -107,7 +144,7 @@ var app = {
 				}
 				if (answer.success) {
 					app.setDeviceKey(answer.device_key);
-					$.mobile.changePage("#settings");
+					$.mobile.changePage('#settings');
 				} else {
 					var errorMessage = 'Unknown server error';
 					if (answer.errors) {
@@ -162,9 +199,7 @@ var app = {
 		if (note) {
 			params.note = note;
 		}
-		//return params;
-		console.log(params);
-		return {};
+		return params;
 	},
 
 /**
@@ -183,14 +218,12 @@ var app = {
 	* @return {String}
 	*/
 	getDeviceInfo: function() {
-		if (typeof(device) == "undefined") {
-			return null;
-		}
-		return 'Device Name: ' + device.name + '<br />' + 
-			'Device PhoneGap: ' + device.phonegap + '<br />' + 
-			'Device Platform: ' + device.platform + '<br />' + 
-			'Device UUID: ' + device.uuid + '<br />' + 
-			'Device Version: '  + device.version  + '<br />';
+		if (typeof(device) == "undefined") { return null; }
+		return 'Device Name: ' + device.name + '\n' + 
+			'Device PhoneGap: ' + device.phonegap + '\n' + 
+			'Device Platform: ' + device.platform + '\n' + 
+			'Device UUID: ' + device.uuid + '\n' + 
+			'Device Version: '  + device.version  + '\n';
 	},
 
 /**
@@ -210,27 +243,208 @@ var app = {
 	* function, we must explicity call 'app.receivedEvent(...);'
 	*/
 	onDeviceReady: function() {
-		app.receivedEvent('deviceready');
-		if (typeof(device) != "undefined") {
-			$('#devicename').val(device.name);
-		}
-	},
-
-/*
-	* Update DOM on a Received Event
-	*/
-	receivedEvent: function(id) {
-		console.log('Received Event: ' + id);
+		if (typeof(device) == "undefined") { return; }
+		$('#devicename').val(device.name);
 	}
-};
-
+});
 
 /**
- * 
+ * Abstract looper class
  */
-app.manager = {
-	
-};
+app.Looper = Class.extend({
+/**
+	* LocalStorage id to store last status of looper
+	*/
+	storageId: 'undefinedLooperValue',
+
+/**
+	* Looper name (to show messages in console)
+	*/
+	name: 'Undefined looper',
+
+/**
+	* Period
+	*/
+	period: 1000, // 1 sec
+
+/**
+	* @constructor
+	*//*
+	init: function() {
+		console.log('Init');
+	},*/
+
+/**
+	* Starts or stops looper
+	* @param {Boolean} value True to start looping
+	*/
+	setActive: function(value) {
+		var me = this;
+		if (!me.executeFunctionId) {
+			console.log(me.name + ' is started.');
+			me.executeFunctionId = setInterval(function() {
+				me.execute.call(me);
+			}, me.period);
+			me.execute();
+		} else {
+			clearInterval(me.executeFunctionId);
+			me.executeFunctionId = null;
+			console.log(me.name + ' is stopped.');
+		}
+		app.storage.set(this.storageId, me.executeFunctionId ? 1 : 0);
+	},
+
+/**
+	* Starts sending data
+	*/
+	start: function() {
+		this.setActive(true);
+	},
+
+/**
+	* Stops sending data
+	*/
+	stop: function() {
+		this.setActive(false);
+	},
+
+/**
+	* Returns false if tracking is disabled
+	*/
+	isActive: function() {
+		return !!this.executeFunctionId;
+	},
+
+/**
+	* Returns false if looper execution is disabled
+	*/
+	isEnabled: function() {
+		return (app.storage.get(this.storageId) != 0);
+	},
+
+/**
+	* Main loop
+	*/
+	execute: function() {
+		console.log('Method "execute" of looper is not implemented!');
+	}
+});
+
+/**
+ * Application manager
+ */
+app.LocationTrackerLooper = app.Looper.extend({
+	storageId: 'locationTrackerValue',
+	name: 'Location tracker',
+	period: app.cfg.checkLocationPeriod,
+
+/**
+	* Receives and sends current location
+	*/
+	execute: function() {
+		if (this.isCheckingLocation) { return; }
+		var me = this;
+		me.isCheckingLocation = true;
+		me.getCurrentLocation(function(result) {
+			me.isCheckingLocation = false;
+			if (!result.success) { return; }
+			// store packet
+			console.log('Location stored');
+		});
+	},
+
+/**
+	* Returns current location.
+	* The function makes two attempts. First attempt is done with
+	* option enableHighAccuracy set to true - to enable use of GPS data.
+	* If there is a timeout during location retrieving, then second
+	* request is called with enableHighAccuracy set to false, to get
+	* cellular (or wifi) position
+	* @param {Function} fn Callback function
+	* @return {Object} 
+	*/
+	getCurrentLocation: function(fn) {
+		if (typeof(navigator) == "undefined") { return; }
+		if (typeof(navigator.geolocation) == "undefined") { return; }
+		var me = this;
+		// ----------------------------------------------
+		// Success callback
+		//
+		var successCallback = function(position) {
+			// success
+			if (position.coords.accuracy >= app.cfg.accuracyLimit) {
+				fn.call(me, {
+					success: false,
+					error: {
+						code: 2, // POSITION_UNAVAILABLE
+						message: 'Accuracy is too low: ' +
+							position.coords.accuracy
+					}
+				});
+			} else {
+				fn.call(me, {
+					success: true,
+					data: position
+				});
+			}
+		};
+		// ----------------------------------------------
+		// Error callback
+		//
+		var errorCallback = function(error) {
+			var msg = "Can't get device location. Error = ";
+			if (error.code == error.PERMISSION_DENIED)
+				msg += "PERMISSION_DENIED";
+			else if (error.code == error.POSITION_UNAVAILABLE)
+				msg += "POSITION_UNAVAILABLE";
+			else if (error.code == error.TIMEOUT)
+				msg += "TIMEOUT";
+			msg += ", msg = " + error.message;
+			console.log(msg);
+			fn.call(me, {
+				success: false,
+				error: {
+					code: error.code,
+					message: error.message
+				}
+			});
+		};
+		// ----------------------------------------------
+		navigator.geolocation.getCurrentPosition(
+			successCallback,
+			function(error) {
+				if (error.code == error.TIMEOUT) {
+					// Attempt to get GPS loc timed out after 5 seconds, 
+					// try low accuracy location
+					navigator.geolocation.getCurrentPosition(
+						successCallback,
+						errorCallback, {
+							maximumAge: app.cfg.maximumPositionAge,
+							timeout: 10000, // 10 seconds
+							enableHighAccuracy: false
+						});
+				} else {
+					errorCallback(error);
+				}
+			}, {
+				maximumAge: app.cfg.maximumPositionAge,
+				timeout: 5000, // 5 seconds
+				enableHighAccuracy: false//true
+			});
+	}
+});
+
+/**
+ * Sender manager
+ */
+app.ServerSenderLooper = app.Looper.extend({
+	storageId: 'serverSenderValue',
+	name: 'Sender',
+	period: app.cfg.sendDataPeriod,
+	execute: function() {
+		console.log('Next step!');
+	}
+});
 
 /**
  * Storage implementation
@@ -251,11 +465,4 @@ app.storage = {
 			window.localStorage.removeItem(id);
 		}
 	}
-};
-
-/**
- * Application configuration
- */
-app.cfg = {
-	path: 'https://observer.maprox.net/'
 };

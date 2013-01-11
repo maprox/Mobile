@@ -6,16 +6,14 @@
 	<meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
 
 	<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
-	<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
 	<link rel="stylesheet" type="text/css" media="all" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
-
 	<link rel="stylesheet" type="text/css" href="css/index.css" />
 	<title>Maprox RClient</title>
 
 </head>
 <body>
 
-<div data-role="page" id="empty">
+<div data-role="page" id="startup">
 </div>
 
 <div data-role="page" id="settings">
@@ -23,10 +21,24 @@
 		<h1>Settings</h1>
 	</div>
 	<div data-role="content">
-		And the settings go here...
-		<p><a href="#registration" data-direction="reverse" data-role="button" data-theme="b" data-transition="slideup">
-			Back to the registration page
-		</a></p>
+		<p style="color:green">
+			Your device is registered.
+		</p>
+		<p>
+			RClient is in alpha version.<br/>
+			So there is no settings yet.
+			Period of sending the location equals to 1 minute.
+		</p>
+		<p>
+			<label for="tracking">Location tracking:</label>
+			<select name="tracking" id="tracking" data-role="slider">
+				<option value="0">Off</option>
+				<option value="1" selected>On</option>
+			</select>
+		</p>
+		<div class="errorBlock" style="display:none">
+			The error message is here
+		</div>
 	</div>
 </div>
 
@@ -53,10 +65,44 @@
 <script type="text/javascript" src="phonegap.js"></script>
 <script type="text/javascript" src="js/utils.js"></script>
 <script type="text/javascript" src="js/index.js"></script>
+
 <script type="text/javascript">
-$(document).bind("pageinit", function() {
+$(document).on("mobileinit", function(){
+	console.log('mobileinit');
+	// we do not need hash in url
+	$.mobile.hashListeningEnabled = false;
+});
+$('#startup').live('pageinit', function() {
+	console.log('pageinit: startup');
+});
+$('#settings').live('pageinit', function() {
+	console.log('pageinit: settings');
+});
+$('#registration').live('pageinit', function() {
+	console.log('pageinit: registration');
+});
+$('#startup').live('pageshow', function() {
+	console.log('pageshow: startup');
+});
+$('#settings').live('pageshow', function() {
+	console.log('pageshow: settings');
+});
+$('#registration').live('pageshow', function() {
+	console.log('pageshow: registration');
+});
+$(document).on('pagechange', function() {
+	console.log('pagechange: ' + $.mobile.activePage[0].id);
+});
+$('#startup').live('pageinit', function() {
+	console.log('application start');
 	app.initialize();
 });
+</script>
+
+<!-- jquerymobile is linked last !important; -->
+<script
+	type="text/javascript"
+	src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js">
 </script>
 
 </body>
