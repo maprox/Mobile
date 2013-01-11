@@ -349,7 +349,22 @@ app.LocationTrackerLooper = app.Looper.extend({
 			me.isCheckingLocation = false;
 			if (!result.success) { return; }
 			// store packet
-			console.log('Location stored');
+			var packets = app.storage.get('locationPackets');
+			if (!packets) {
+				packets = '[]';
+			}
+			packets = JSON.parse(packets);
+			packets.push({
+				latitude: result.data.coords.latitude,
+				longitude: result.data.coords.longitude,
+				altitude: result.data.coords.altitude,
+				azimuth: result.data.coords.heading,
+				accuracy: result.data.coords.accuracy,
+				speed: result.data.coords.speed,
+				time: result.data.timestamp
+			});
+			app.storage.set('locationPackets', JSON.stringify(packets));
+			console.log('Location stored. Packets count: ' + packets.length);
 		});
 	},
 
@@ -429,7 +444,7 @@ app.LocationTrackerLooper = app.Looper.extend({
 			}, {
 				maximumAge: app.cfg.maximumPositionAge,
 				timeout: 5000, // 5 seconds
-				enableHighAccuracy: false//true
+				enableHighAccuracy: true
 			});
 	}
 });
