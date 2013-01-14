@@ -354,6 +354,12 @@ app.LocationTrackerLooper = app.Looper.extend({
 				packets = '[]';
 			}
 			packets = JSON.parse(packets);
+			// let's check if the last packet equals to the current
+			/* TODO
+			var lastPacket = null;
+			if (packets.length > 0) {
+				lastPacket = packets[packets.length - 1];
+			}*/
 			packets.push({
 				latitude: result.data.coords.latitude,
 				longitude: result.data.coords.longitude,
@@ -458,6 +464,41 @@ app.ServerSenderLooper = app.Looper.extend({
 	period: app.cfg.sendDataPeriod,
 	execute: function() {
 		console.log('Next step!');
+		var me = this;
+		var packets = app.storage.get('locationPackets');
+		app.storage.unset('locationPackets');
+		if (!packets) {
+			packets = '[]';
+		}
+		packets = JSON.parse(packets);
+		if (packets.length > 0) {
+			for (var i = 0; i < packets.length; i++) {
+				packets[i].device_key = app.getDeviceKey();
+				packets[i].uid = app.getDeviceUid();
+			}
+			// let's send packets to the server
+			// make ajax request
+			$.ajax({
+				url: app.cfg.path + '/mon_packet/create',
+				dataType: 'jsonp',
+				type: 'POST',
+				data: {
+					list: packets
+				},
+				success: function(answer) {
+					// unlock application
+					me.unlock();
+					// 
+					console.log('Got the answer: ', answer);
+				},
+				error: function() {
+					// unlock application
+					me.unlock();
+					// 
+					console.error('Unknown server error');
+				}
+			});
+		}
 	}
 });
 
