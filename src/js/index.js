@@ -7,14 +7,30 @@
  * Application configuration
  */
 var app = {
+	/*
 	cfg: {
-		path: 'https://observer.maprox.net/',
+		path: 'https://observer.maprox.net',
 		checkLocationPeriod: 20000, // 20 sec
 		sendDataPeriod: 60000, // 1 minute
 		accuracyLimit: 150, // 150 meters,
-		maximumPositionAge: 600000 // 10 minutes
+		maximumPositionAge: 600000, // 10 minutes
+		maximumLocationSleepPeriod: 600000 // 10 minutes
 	}
+	//*/
+	///*
+	// DEBUG SETTINGS
+	cfg: {
+		//path: 'http://observer.localhost',
+		path: 'http://observer.maprox.net',
+		checkLocationPeriod: 2000, // 2 sec
+		sendDataPeriod: 10000, // 10 sec
+		accuracyLimit: 200, // 150 m,
+		maximumPositionAge: 600000, // 10 min
+		maximumLocationSleepPeriod: 60000 // 1 min
+	}
+	//*/
 };
+
 
 /**
  * Main application
@@ -131,7 +147,7 @@ extend(app, {
 		// make ajax request
 		$.ajax({
 			url: app.cfg.path + '/mon_device/create',
-			dataType: 'jsonp',
+			dataType: 'json',
 			type: 'POST',
 			data: app.getSignupParams(),
 			success: function(answer) {
@@ -140,7 +156,7 @@ extend(app, {
 				// 
 				console.log('Got the answer: ', answer);
 				if (!answer) {
-					return app.setSignupError('Wrong response from server');
+					return app.setError('Wrong response from server');
 				}
 				if (answer.success) {
 					app.setDeviceKey(answer.device_key);
@@ -153,14 +169,14 @@ extend(app, {
 							errorMessage = error.params[0];
 						}
 					}
-					return app.setSignupError(errorMessage);
+					return app.setError(errorMessage);
 				}
 			},
 			error: function() {
 				// unlock application
 				app.unlock();
 				// 
-				app.setSignupError('Unknown server error');
+				app.setError('Unknown server error');
 			}
 		});
 	},
@@ -169,14 +185,17 @@ extend(app, {
 	* Shows signup error
 	* @param {String} message
 	*/
-	setSignupError: function(message) {
+	setError: function(message, page) {
+		if (!page) {
+			page = 'registration';
+		}
 		if (!message) {
 			// hide message
-			$('#registration .errorBlock').hide();
+			$('#' + page + ' .errorBlock').hide();
 			return;
 		}
-		$('#registration .errorBlock').show();
-		$('#registration .errorBlock').html(message);
+		$('#' + page + ' .errorBlock').show();
+		$('#' + page + ' .errorBlock').html(message);
 	},
 
 /**
@@ -207,6 +226,7 @@ extend(app, {
 	* @return {String}
 	*/
 	getDeviceUid: function() {
+		return '987654321654987';
 		if (typeof(device) == "undefined") {
 			return 'DeviceObjectIsNotFound';
 		}
@@ -342,35 +362,44 @@ app.LocationTrackerLooper = app.Looper.extend({
 	* Receives and sends current location
 	*/
 	execute: function() {
-		if (this.isCheckingLocation) { return; }
+		if (this.isLocked) { return; }
+		this.isLocked = true;
 		var me = this;
-		me.isCheckingLocation = true;
 		me.getCurrentLocation(function(result) {
-			me.isCheckingLocation = false;
-			if (!result.success) { return; }
-			// store packet
-			var packets = app.storage.get('locationPackets');
-			if (!packets) {
-				packets = '[]';
-			}
-			packets = JSON.parse(packets);
-			// let's check if the last packet equals to the current
-			/* TODO
-			var lastPacket = null;
-			if (packets.length > 0) {
-				lastPacket = packets[packets.length - 1];
-			}*/
-			packets.push({
+			me.isLocked = false;
+			console.log(result);
+			if (!result || !result.success) { return; }
+			var packet = {
 				latitude: result.data.coords.latitude,
 				longitude: result.data.coords.longitude,
 				altitude: result.data.coords.altitude,
 				azimuth: result.data.coords.heading,
 				accuracy: result.data.coords.accuracy,
 				speed: result.data.coords.speed,
-				time: result.data.timestamp
-			});
-			app.storage.set('locationPackets', JSON.stringify(packets));
-			console.log('Location stored. Packets count: ' + packets.length);
+				time: new Date(result.data.timestamp)
+			};
+			// let's check if the last packet equals to the current
+			var lastPacket = app.storage.get('lastLocationPacket');
+			if (lastPacket) {
+				lastPacket = JSON.parse(lastPacket);
+			}
+			if (!lastPacket ||
+				lastPacket.latitude != packet.latitude ||
+				lastPacket.longitude != packet.longitude ||
+				(new Date(lastPacket.time)).getTime() != packet.time.getTime()
+			) {
+				// store packet
+				var packets = app.storage.get('locationPackets');
+				if (!packets) {
+					packets = '[]';
+				}
+				packets = JSON.parse(packets);
+				packets.push(packet);
+				var packetsValue = JSON.stringify(packets);
+				app.storage.set('locationPackets', packetsValue);
+				app.storage.set('lastLocationPacket', JSON.stringify(packet));
+				console.log('Location stored. Size: ' + packetsValue.length);
+			}
 		});
 	},
 
@@ -394,15 +423,17 @@ app.LocationTrackerLooper = app.Looper.extend({
 		var successCallback = function(position) {
 			// success
 			if (position.coords.accuracy >= app.cfg.accuracyLimit) {
+				var msg = 'Accuracy is too low: ' + position.coords.accuracy;
+				app.setError(msg, 'settings');
 				fn.call(me, {
 					success: false,
 					error: {
 						code: 2, // POSITION_UNAVAILABLE
-						message: 'Accuracy is too low: ' +
-							position.coords.accuracy
+						message: msg
 					}
 				});
 			} else {
+				app.setError(null, 'settings');
 				fn.call(me, {
 					success: true,
 					data: position
@@ -421,7 +452,7 @@ app.LocationTrackerLooper = app.Looper.extend({
 			else if (error.code == error.TIMEOUT)
 				msg += "TIMEOUT";
 			msg += ", msg = " + error.message;
-			console.log(msg);
+			app.setError(msg, 'settings');
 			fn.call(me, {
 				success: false,
 				error: {
@@ -463,42 +494,54 @@ app.ServerSenderLooper = app.Looper.extend({
 	name: 'Sender',
 	period: app.cfg.sendDataPeriod,
 	execute: function() {
-		console.log('Next step!');
-		var me = this;
-		var packets = app.storage.get('locationPackets');
-		app.storage.unset('locationPackets');
-		if (!packets) {
-			packets = '[]';
-		}
-		packets = JSON.parse(packets);
-		if (packets.length > 0) {
-			for (var i = 0; i < packets.length; i++) {
-				packets[i].device_key = app.getDeviceKey();
-				packets[i].uid = app.getDeviceUid();
+		if (this.isLocked) { return; }
+		try {
+			this.isLocked = true;
+			var me = this;
+			var packets = app.storage.get('locationPackets');
+			app.storage.unset('locationPackets');
+			if (!packets) {
+				packets = '[]';
 			}
-			// let's send packets to the server
-			// make ajax request
-			$.ajax({
-				url: app.cfg.path + '/mon_packet/create',
-				dataType: 'jsonp',
-				type: 'POST',
-				data: {
-					list: packets
-				},
-				success: function(answer) {
-					// unlock application
-					me.unlock();
-					// 
-					console.log('Got the answer: ', answer);
-				},
-				error: function() {
-					// unlock application
-					me.unlock();
-					// 
-					console.error('Unknown server error');
+			packets = JSON.parse(packets);
+			if (packets.length > 0) {
+				for (var i = 0; i < packets.length; i++) {
+					packets[i].device_key = app.getDeviceKey();
+					packets[i].uid = app.getDeviceUid();
 				}
-			});
+				// let's send packets to the server
+				// make ajax request
+				$.ajax({
+					url: app.cfg.path + '/mon_packet/create',
+					dataType: 'json',
+					type: 'POST',
+					data: {
+						list: JSON.stringify(packets)
+					},
+					success: function(answer) {
+						// unlock looper
+						me.isLocked = false;
+						console.log('Got the answer: ', answer);
+					},
+					error: function(jqXHR, textStatus) {
+						// unlock looper
+						me.isLocked = false;
+						console.error('AJAX error: ' + textStatus);
+					}
+				});
+				// exit from function
+				return;
+			}
+		} catch (e) {
+			console.error(e);
 		}
+		this.isLocked = false;
+	},
+
+	getPackets: function() {
+	},
+
+	setPackets: function() {
 	}
 });
 
