@@ -374,9 +374,11 @@ app.LocationTrackerLooper = app.Looper.extend({
 				longitude: result.data.coords.longitude,
 				altitude: result.data.coords.altitude,
 				azimuth: result.data.coords.heading,
-				accuracy: result.data.coords.accuracy,
 				speed: result.data.coords.speed,
-				time: new Date(result.data.timestamp)
+				time: new Date(result.data.timestamp),
+				sensors: {
+					accuracy: result.data.coords.accuracy
+				}
 			};
 			// let's check if the last packet equals to the current
 			var lastPacket = app.storage.get('lastLocationPacket');
