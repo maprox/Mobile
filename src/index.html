@@ -93,10 +93,19 @@ $('#registration').live('pageshow', function() {
 $(document).on('pagechange', function() {
 	console.log('pagechange: ' + $.mobile.activePage[0].id);
 });
-$('#startup').live('pageinit', function() {
-	console.log('application start');
-	app.initialize();
-});
+
+var fnStartup = function () {
+	if (!app.initialized) {
+		console.log('application start');
+		app.initialized = true;
+		app.initialize();
+	}
+}
+
+// $('#startup').live('pageinit', fnStartup);
+// if pageinit
+$(document).ready(fnStartup);
+
 </script>
 
 <!-- jquerymobile is linked last !important; -->
