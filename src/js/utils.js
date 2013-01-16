@@ -1,4 +1,14 @@
 /*
+ * Console fix
+ */
+if (typeof(window.console) == "undefined") {
+	window.console = {
+		log: function() {},
+		error: function() {}
+	};
+}
+
+/*
  * Clone function.
  * http://stackoverflow.com/a/728694/737915
  */
