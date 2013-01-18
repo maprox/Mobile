@@ -5,8 +5,8 @@
 	<meta name="format-detection" content="telephone=no" />
 	<meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
 
-	<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
-	<link rel="stylesheet" type="text/css" media="all" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
+	<script src="vendors/jquery/jquery-1.8.2.min.js"></script>
+	<link rel="stylesheet" type="text/css" media="all" href="vendors/jquery/jquery.mobile-1.2.0.min.css" />
 	<link rel="stylesheet" type="text/css" href="css/index.css" />
 	<title>Maprox RClient</title>
 
@@ -93,16 +93,23 @@ $('#registration').live('pageshow', function() {
 $(document).on('pagechange', function() {
 	console.log('pagechange: ' + $.mobile.activePage[0].id);
 });
-$('#startup').live('pageinit', function() {
-	console.log('application start');
-	app.initialize();
-});
+
+var fnStartup = function () {
+	if (!app.initialized) {
+		console.log('application start');
+		app.initialized = true;
+		app.initialize();
+	}
+}
+
+// $('#startup').live('pageinit', fnStartup);
+// if pageinit
+$(document).ready(fnStartup);
+
 </script>
 
 <!-- jquerymobile is linked last !important; -->
-<script
-	type="text/javascript"
-	src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js">
+<script type="text/javascript" src="vendors/jquery/jquery.mobile-1.2.0.min.js">
 </script>
 
 </body>
