@@ -226,7 +226,6 @@ extend(app, {
 	* @return {String}
 	*/
 	getDeviceUid: function() {
-		return '987654321654987';
 		if (typeof(device) == "undefined") {
 			return 'DeviceObjectIsNotFound';
 		}
