@@ -115,21 +115,6 @@ extend(app, {
 	},
 
 /**
-	* Returns a stored device key
-	*/
-	getDeviceKey: function() {
-		return app.storage.get("devicekey");
-	},
-
-/**
-	* Sets devicekey value
-	* @param {String} value Device_key value
-	*/
-	setDeviceKey: function(value) {
-		app.storage.set('devicekey', value);
-	},
-
-/**
 	* Locks desktop while make ajax request
 	* @return {Boolean} False if already locked
 	*/
@@ -254,14 +239,43 @@ extend(app, {
 	},
 
 /**
+	* Returns a stored device key
+	*/
+	getDeviceKey: function() {
+		return app.storage.get("devicekey");
+	},
+
+/**
+	* Sets devicekey value
+	* @param {String} value Device_key value
+	*/
+	setDeviceKey: function(value) {
+		app.storage.set('devicekey', value);
+	},
+
+/**
 	* Returns the device uid
 	* @return {String}
 	*/
 	getDeviceUid: function() {
 		if (typeof(device) == "undefined") {
-			return 'DeviceObjectIsNotFound';
+			// let's generate unique device identifier
+			var uid = app.storage.get("deviceuid");
+			if (!uid) {
+				uid = this.generateUid();
+				app.storage.set('deviceuid', uid);
+			}
+			return uid;
 		}
 		return device.uuid;
+	},
+
+/**
+	* Generates unique [must be unique] device identifier
+	* @return {String}
+	*/
+	generateUid: function() {
+		return new Date().getTime() + '' + Math.floor(Math.random() * 100000);
 	},
 
 /**
