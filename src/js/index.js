@@ -7,21 +7,23 @@
  * Application configuration
  */
 var app = {
-	/*
+	///*
 	cfg: {
 		path: 'https://observer.maprox.net',
-		checkLocationPeriod: 20000, // 20 sec
-		sendDataPeriod: 60000, // 1 minute
+		hostname: 'rclient.maprox.net',
+		checkLocationPeriod: 60000, // 1 minute
+		sendDataPeriod: 600000, // 10 minutes
 		accuracyLimit: 150, // 150 meters,
 		maximumPositionAge: 600000, // 10 minutes
 		maximumLocationSleepPeriod: 600000 // 10 minutes
 	}
 	//*/
-	///*
+	/*
 	// DEBUG SETTINGS
 	cfg: {
 		//path: 'http://observer.localhost',
 		path: 'http://observer.maprox.net',
+		hostname: 'rclient.localhost',
 		checkLocationPeriod: 2000, // 2 sec
 		sendDataPeriod: 10000, // 10 sec
 		accuracyLimit: 200, // 150 m,
@@ -61,6 +63,17 @@ extend(app, {
 					' ' + xhr.responseText);
 			}
 		});
+	},
+
+/**
+	* Returns an url to the supplied path
+	* @param {String} path Uri to open
+	*/
+	getUrl: function(path) {
+		if (window.location.hostname === app.cfg.hostname) {
+			return '/proxy/' + path;
+		}
+		return app.cfg.path + '/' + path;
 	},
 
 /**
@@ -146,7 +159,7 @@ extend(app, {
 
 		// make ajax request
 		$.ajax({
-			url: app.cfg.path + '/mon_device/create',
+			url: app.getUrl('/mon_device/create'),
 			dataType: 'json',
 			type: 'POST',
 			data: app.getSignupParams(),
@@ -154,7 +167,6 @@ extend(app, {
 				// unlock application
 				app.unlock();
 				// 
-				console.log('Got the answer: ', answer);
 				if (!answer) {
 					return app.setError('Wrong response from server');
 				}
@@ -196,6 +208,26 @@ extend(app, {
 		}
 		$('#' + page + ' .errorBlock').show();
 		$('#' + page + ' .errorBlock').html(message);
+	},
+
+/**
+	* Shows log message
+	* @param {String} message
+	*/
+	addLog: function(message, page) {
+		if (!page) { page = 'settings'; }
+		var blockSelector = '#' + page + ' .logBlock';
+		var block = $(blockSelector);
+		if (!message) {
+			// hide message
+			block.hide();
+			block.html('> ');
+			return;
+		}
+		console.log(message);
+		var msg = JSON.stringify(message);
+		block.html(block.html() + '> ' + msg + '<br/>');
+		block.show();
 	},
 
 /**
@@ -367,7 +399,7 @@ app.LocationTrackerLooper = app.Looper.extend({
 		var me = this;
 		me.getCurrentLocation(function(result) {
 			me.isLocked = false;
-			console.log(result);
+			app.addLog(result);
 			if (!result || !result.success) { return; }
 			var packet = {
 				latitude: result.data.coords.latitude,
@@ -400,7 +432,7 @@ app.LocationTrackerLooper = app.Looper.extend({
 				var packetsValue = JSON.stringify(packets);
 				app.storage.set('locationPackets', packetsValue);
 				app.storage.set('lastLocationPacket', JSON.stringify(packet));
-				console.log('Location stored. Size: ' + packetsValue.length);
+				app.addLog('Location stored. Size: ' + packetsValue.length);
 			}
 		});
 	},
@@ -514,7 +546,7 @@ app.ServerSenderLooper = app.Looper.extend({
 				// let's send packets to the server
 				// make ajax request
 				$.ajax({
-					url: app.cfg.path + '/mon_packet/create',
+					url: app.getUrl('/mon_packet/create'),
 					dataType: 'json',
 					type: 'POST',
 					data: {
@@ -523,19 +555,19 @@ app.ServerSenderLooper = app.Looper.extend({
 					success: function(answer) {
 						// unlock looper
 						me.isLocked = false;
-						console.log('Got the answer: ', answer);
+						app.addLog('Got the answer: ', answer);
 					},
 					error: function(jqXHR, textStatus) {
 						// unlock looper
 						me.isLocked = false;
-						console.error('AJAX error: ' + textStatus);
+						app.addLog('AJAX error: ' + textStatus);
 					}
 				});
 				// exit from function
 				return;
 			}
 		} catch (e) {
-			console.error(e);
+			app.setError(e, 'settings');
 		}
 		this.isLocked = false;
 	},

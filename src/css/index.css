@@ -27,3 +27,16 @@
 	font-weight: bold;
 	text-align: center;
 }
+
+/* -----------------------
+     LOG BLOCK
+   ----------------------- */
+
+.logBlock{
+	padding:20px;
+	background: #efe;
+	font-weight: bold;
+	text-align: left;
+	font-family: monospace;
+	word-wrap: break-word;
+}
