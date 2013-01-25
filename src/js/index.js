@@ -211,7 +211,8 @@ extend(app, {
 		}
 		console.log(message);
 		var msg = JSON.stringify(message);
-		block.html(block.html() + '> ' + msg + '<br/>');
+		var res = '> ' + msg + '<br/>' + block.html();
+		block.html(res.substring(0, 1024));
 		block.show();
 	},
 
