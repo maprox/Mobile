@@ -10,12 +10,10 @@ var app = {
 	///*
 	cfg: {
 		path: 'https://observer.maprox.net',
-		hostname: 'rclient.maprox.net',
-		checkLocationPeriod: 60000, // 1 minute
-		sendDataPeriod: 600000, // 10 minutes
+		checkLocationPeriod: 30000, // 30 seconds
+		sendDataPeriod: 300000, // 5 minutes
 		accuracyLimit: 150, // 150 meters,
-		maximumPositionAge: 600000, // 10 minutes
-		maximumLocationSleepPeriod: 600000 // 10 minutes
+		maximumPositionAge: 600000 // 10 minutes
 	}
 	//*/
 	/*
@@ -23,12 +21,20 @@ var app = {
 	cfg: {
 		//path: 'http://observer.localhost',
 		path: 'http://observer.maprox.net',
-		hostname: 'rclient.localhost',
 		checkLocationPeriod: 2000, // 2 sec
 		sendDataPeriod: 10000, // 10 sec
 		accuracyLimit: 200, // 150 m,
-		maximumPositionAge: 600000, // 10 min
-		maximumLocationSleepPeriod: 60000 // 1 min
+		maximumPositionAge: 600000 // 10 min
+	}
+	//*/
+	///*
+	// DEBUG SETTINGS
+	/*cfg: {
+		path: 'http://observer.localhost',
+		checkLocationPeriod: 2000, // 2 sec
+		sendDataPeriod: 10000, // 10 sec
+		accuracyLimit: 200, // 150 m,
+		maximumPositionAge: 600000 // 10 min
 	}
 	//*/
 };
@@ -66,11 +72,18 @@ extend(app, {
 	},
 
 /**
+	* Returns 'true' if this app is executed in browser
+	*/
+	isNative: function() {
+		return (typeof(device) != "undefined");
+	},
+
+/**
 	* Returns an url to the supplied path
 	* @param {String} path Uri to open
 	*/
 	getUrl: function(path) {
-		if (window.location.hostname === app.cfg.hostname) {
+		if (!app.isNative()) {
 			return '/proxy/' + path;
 		}
 		return app.cfg.path + '/' + path;
@@ -153,7 +166,8 @@ extend(app, {
 				app.unlock();
 				// 
 				if (!answer) {
-					return app.setError('Wrong response from server');
+					app.setError('Wrong response from server');
+					return;
 				}
 				if (answer.success) {
 					app.setDeviceKey(answer.device_key);
@@ -166,7 +180,7 @@ extend(app, {
 							errorMessage = error.params[0];
 						}
 					}
-					return app.setError(errorMessage);
+					app.setError(errorMessage);
 				}
 			},
 			error: function() {
@@ -212,7 +226,7 @@ extend(app, {
 		console.log(message);
 		var msg = JSON.stringify(message);
 		var res = '> ' + msg + '<br/>' + block.html();
-		block.html(res.substring(0, 1024));
+		block.html(res.substring(0, 2048));
 		block.show();
 	},
 
@@ -413,7 +427,6 @@ app.LocationTrackerLooper = app.Looper.extend({
 		var me = this;
 		me.getCurrentLocation(function(result) {
 			me.isLocked = false;
-			app.addLog(result);
 			if (!result || !result.success) { return; }
 			var packet = {
 				latitude: result.data.coords.latitude,
@@ -546,12 +559,12 @@ app.ServerSenderLooper = app.Looper.extend({
 		try {
 			this.isLocked = true;
 			var me = this;
-			var packets = app.storage.get('locationPackets');
+			var packetsValue = app.storage.get('locationPackets');
 			app.storage.unset('locationPackets');
-			if (!packets) {
-				packets = '[]';
+			if (!packetsValue) {
+				packetsValue = '[]';
 			}
-			packets = JSON.parse(packets);
+			packets = JSON.parse(packetsValue);
 			if (packets.length > 0) {
 				for (var i = 0; i < packets.length; i++) {
 					packets[i].device_key = app.getDeviceKey();
@@ -569,19 +582,31 @@ app.ServerSenderLooper = app.Looper.extend({
 					success: function(answer) {
 						// unlock looper
 						me.isLocked = false;
-						app.addLog('Got the answer: ', answer);
+						if (answer && answer.success) {
+							app.addLog('[OK] Packets are transferred!');
+						} else {
+							app.storage.set('locationPackets', packetsValue);
+							app.addLog('<pre style=\'color:red\'>' +
+								'Transfer error!' + '</pre>');
+							if (answer.errors) {
+								app.addLog('<pre style=\'color:red\'>' +
+									answer.errors[0] + '</pre>');
+							}
+						}
 					},
 					error: function(jqXHR, textStatus) {
 						// unlock looper
 						me.isLocked = false;
-						app.addLog('AJAX error: ' + textStatus);
+						app.storage.set('locationPackets', packetsValue);
+						app.addLog('<pre style=\'color:red\'>' + textStatus +
+							'\n' + jqXHR.responseText + '</pre>');
 					}
 				});
 				// exit from function
 				return;
 			}
 		} catch (e) {
-			app.setError(e, 'settings');
+			app.addLog(e, 'settings');
 		}
 		this.isLocked = false;
 	},
