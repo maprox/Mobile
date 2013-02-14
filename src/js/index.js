@@ -224,7 +224,8 @@ extend(app, {
 			return;
 		}
 		console.log(message);
-		var msg = JSON.stringify(message);
+		var ct = new Date();
+		var msg = '[' + ct + '] ' + JSON.stringify(message);
 		var res = '> ' + msg + '<br/>' + block.html();
 		block.html(res.substring(0, 2048));
 		block.show();
@@ -427,7 +428,9 @@ app.LocationTrackerLooper = app.Looper.extend({
 		var me = this;
 		me.getCurrentLocation(function(result) {
 			me.isLocked = false;
+			app.addLog('Location get...');
 			if (!result || !result.success) { return; }
+			app.addLog('Location get = OK');
 			var packet = {
 				latitude: result.data.coords.latitude,
 				longitude: result.data.coords.longitude,
